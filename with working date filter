@@ -1,0 +1,93 @@
+library(shiny)
+library(shinydashboard)
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+
+
+raw <- read_excel("Pac_dash/PACdb2.xlsx") %>% select(Year:Participants)
+
+ui<- fluidPage(
+  
+    # Application title
+    titlePanel("PAC Dashboard"),
+    sidebarLayout(
+      sidebarPanel(
+        selectInput(inputId = "sport",
+                    label = "Select a sport:",
+                    choices= raw %>% distinct(Sport)),
+        
+        radioButtons(inputId = "cate",
+                     label = "Type of Participants:",
+                     choices = list("Total" = 1,
+                                    "Casual" = 2,
+                                    "Core" = 3),
+                     selected = 2),
+        
+        checkboxGroupInput(inputId = "checkGroup",
+                           label = strong("Select your view here:"),
+                           choices = list("By Age" = 1,
+                                          "By Gender" = 2,
+                                          "By Income" = 3,
+                                          "By Education"=4,
+                                          "By Geographic location"=5),
+                           selected = 1),
+        
+        selectInput(
+          inputId =  "date", 
+          label = "Select time period:", 
+          choices = 2014:as.numeric(format(Sys.Date(),"%Y")),
+          selected = 2019,
+          multiple = TRUE
+        )
+        
+      ),
+      
+      # Show a plot of the generated distribution
+      mainPanel(
+        tableOutput("distPlot")
+      )
+    )
+  )
+
+
+
+server<-function(input, output) {
+  
+  #create a dataframe
+  df<- reactive({
+    raw %>%
+      filter(Sport == input$sport) %>%
+      filter(
+        if (input$cate==2) {
+          Category =="Casual"
+        } else if (input$cate==3){
+          Category =="Core"
+        } else {
+          (Category == "Casual" | Category == "Core")
+        }) 
+  })
+  
+  
+  
+  
+  output$distPlot <- renderTable({
+    
+    df_plot<- df() %>%
+      filter(Code == "sex") %>%
+      filter(Year %in% input$date) %>%
+      group_by(Year,Subcategory) %>%
+      summarise(Participants = sum(Participants)) %>%
+      ungroup() 
+    
+   df_plot 
+    
+  })
+  
+  
+}
+
+
+shinyApp(ui, server)
