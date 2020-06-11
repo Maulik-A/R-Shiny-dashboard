@@ -28,8 +28,8 @@ ui<- fluidPage(
                  
                  selectInput(inputId = "view",
                              label = strong("Select your view here:"),
-                             choices = list("By Age" = "sex",
-                                            "By Gender" = "gen",
+                             choices = list("By Age" = "age",
+                                            "By Gender" = "sex",
                                             "By Income" = "inc",
                                             "By Education"="edu",
                                             "By Geographic location"="geo"),
