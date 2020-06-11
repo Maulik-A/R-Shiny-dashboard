@@ -1,0 +1,101 @@
+library(shiny)
+library(shinydashboard)
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(plotly)
+
+
+raw <- read_excel("Pac_dash/PACdb2.xlsx") %>% select(Year:Participants)
+
+ui<- fluidPage(
+  
+  # Application title
+  titlePanel("PAC Dashboard"),
+  sidebarLayout(
+    sidebarPanel(width = 3,
+                 selectInput(inputId = "sport",
+                             label = "Select a sport:",
+                             choices= raw %>% distinct(Sport)),
+                 
+                 radioButtons(inputId = "cate",
+                              label = "Type of Participants:",
+                              choices = list("Total" = 1,
+                                             "Casual" = 2,
+                                             "Core" = 3),
+                              selected = 2),
+                 
+                 selectInput(inputId = "view",
+                             label = strong("Select your view here:"),
+                             choices = list("By Age" = "sex",
+                                            "By Gender" = "gen",
+                                            "By Income" = "inc",
+                                            "By Education"="edu",
+                                            "By Geographic location"="geo"),
+                             selected = 2),
+                 
+                 selectInput(
+                   inputId =  "date", 
+                   label = "Select time period:", 
+                   choices = 2014:as.numeric(format(Sys.Date(),"%Y")),
+                   selected = c(2014,2019),
+                   multiple = TRUE
+                 )
+                 
+    ),
+    
+    # Show a plot of the generated distribution
+    mainPanel(width = 9,
+              plotlyOutput("distPlot")
+    )
+  )
+)
+
+
+
+server<-function(input, output) {
+  
+  #create a dataframe
+  df<- reactive({
+    raw %>%
+      filter(Sport == input$sport) %>%
+      filter(
+        if (input$cate==2) {
+          Category =="Casual"
+        } else if (input$cate==3){
+          Category =="Core"
+        } else {
+          (Category == "Casual" | Category == "Core")
+        }) 
+  })
+  
+  
+  
+  
+  output$distPlot <- renderPlotly({
+    
+    df_plot<- df() %>%
+      filter(Code == input$view) %>%
+      filter(Year %in% input$date) %>%
+      group_by(Year,Subcategory) %>%
+      summarise(Participants = sum(Participants)) %>%
+      ungroup() 
+    
+    p<- ggplot(data=df_plot,mapping= aes(x= Year,y=Participants,group=Subcategory))+
+      geom_line(aes(color=Subcategory))+
+      geom_point(aes(color=Subcategory))+
+      ylab("Participants(000s)")+
+      xlab("Year")+
+      ggtitle("Gender distribution of the participants")
+    
+    fig<-ggplotly(p)
+    fig
+    
+  })
+  
+  
+}
+
+
+shinyApp(ui, server)
