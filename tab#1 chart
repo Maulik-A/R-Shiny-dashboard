@@ -1,0 +1,25 @@
+server<-function(input, output){ 
+  
+  output$distPlot <- renderPlotly({
+  
+  df<- raw %>%
+    filter(Sport %in% input$sport) %>%
+    filter(Category== input$cate) %>% 
+    filter(Code == input$view) %>% 
+    filter(Year %in% input$date) %>%
+    group_by(Year, Subcategory) %>%
+    summarise(Participants = sum(Participants)) %>%
+    pivot_wider(names_from = Year, values_from = Participants) %>% 
+    ungroup() 
+  
+  raw.df<-data.frame(df,make.names=FALSE)
+  
+fig<-plot_ly(raw.df, x=~Subcategory, y=~raw.df[,2] ,type = 'bar',name = '2014')
+fig <- fig %>% add_trace(y=~raw.df[,3], name = '2015')
+fig <- fig %>% add_trace(y=~raw.df[,4], name = '2016')
+fig <- fig %>% add_trace(y=~raw.df[,5], name = '2017')
+fig <- fig %>% add_trace(y=~raw.df[,6], name = '2018')
+fig <- fig %>% add_trace(y=~raw.df[,7], name = '2019')
+fig
+})
+}
