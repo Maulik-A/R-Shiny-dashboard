@@ -1,0 +1,85 @@
+library(shiny)
+library(shinydashboard)
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(plotly)
+
+
+raw <- read_excel("Pac_dash/PACdb_12.xlsx")
+
+ui<- fluidPage(
+  
+  # Application title
+  titlePanel("PAC Dashboard"),
+  sidebarLayout(
+    sidebarPanel(
+      width = 3,
+      title = "Filters",
+      selectInput(inputId = "sport3",
+                  label = "Select a sport:",
+                  choices= raw %>% distinct(Sport)),
+      
+      radioButtons(inputId = "cate3",
+                   label = "Type of Participants:",
+                   choices = list("Total" = "Total",
+                                  "Casual" = "Casual",
+                                  "Core" = "Core",
+                                  "Male"= "Male",
+                                  "Female"="Female"),
+                   selected = "Total"),
+      
+      selectInput(inputId = "view3",
+                  label = strong("Select your view here:"),
+                  choices = list("Total" = "tot",
+                                 "By Age" = "age",
+                                 "By Gender" = "gen",
+                                 "By Income" = "inc",
+                                 "By Education"="edu",
+                                 "By Geographic location"="geo"),
+                  selected = "gen"),
+      
+      selectInput(
+        inputId =  "date3", 
+        label = "Select time period:", 
+        choices = 2014:2019,
+        selected = c(2014:2019),
+        multiple = TRUE
+      )
+      
+      
+    ),
+    
+    # Show a plot of the generated distribution
+    mainPanel(width = 9,
+              plotlyOutput("plot3")
+    )
+  )
+)
+
+
+
+server<-function(input, output) { 
+  
+  output$plot3 <- renderPlotly({
+    
+    df_prof<- raw %>%
+      filter(Sport %in% input$sport3) %>%
+      filter(Category== input$cate3) %>%
+      filter(Code == input$view3) %>% 
+      filter(Year %in% input$date3) %>%
+      group_by(Year,Subcategory) %>%
+      summarise(Segment = sum(Segment)) %>%
+      ungroup() 
+    df_prof
+    
+   p<- plot_ly(df_prof, x = ~Year, y=~ Segment, type='bar', group = ~Subcategory, color = ~Subcategory)
+   p<- p%>% layout(barmode = 'stack')
+   p
+    
+  })
+}
+
+
+shinyApp(ui, server)
