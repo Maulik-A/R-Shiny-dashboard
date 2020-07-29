@@ -1,0 +1,107 @@
+library(shiny)
+library(shinydashboard)
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(plotly)
+
+
+raw <- read_excel("Pac_dash/PACdb_12.xlsx")
+
+ui<- fluidPage(
+  
+  # Application title
+  titlePanel("PAC Dashboard"),
+  sidebarLayout(
+    sidebarPanel(
+      width = 3,
+      title = "Filters",
+      selectInput(inputId = "sport",
+                  label = "Select a sport:",
+                  choices= raw %>% distinct(Sport)),
+      
+      radioButtons(inputId = "cate",
+                   label = "Type of Participants:",
+                   choices = list("Total" = "Total",
+                                  "Casual" = "Casual",
+                                  "Core" = "Core",
+                                  "Male"= "Male",
+                                  "Female"="Female"),
+                   selected = "Total"),
+      
+     
+      uiOutput("view"),
+      
+      selectInput(inputId = "data",
+                  label = "Select a data type:",
+                  choices= list ("Participants" = "Participants",
+                                 "Participation Rate by Group" = "Participation Rate by Group",
+                                 "Index vs. Total Population" = "Index vs Total Population"),
+                  selected = "Participants")
+      
+        
+    ),
+    
+    # Show a plot of the generated distribution
+    mainPanel(width = 9,
+              plotlyOutput("distPlot")
+    )
+  )
+)
+
+
+
+server<-function(input, output) { 
+  
+  output$view <- renderUI({
+    
+    if (input$cate %in% c("Male","Female")){
+      selectInput("view","Bug Fix", choices = list("Total" = "tot",
+                                                    "By Age" = "age",
+                                                    "By Income" = "inc",
+                                                    "By Education"="edu",
+                                                    "By Geographic location"="geo"))
+    }else{
+      selectInput("view","Bug Fix", choices = list("Total" = "tot",
+                                                    "By Age" = "age",
+                                                    "By Gender" = "gen",
+                                                    "By Income" = "inc",
+                                                    "By Education"="edu",
+                                                    "By Geographic location"="geo"))
+    }
+    
+  })
+ 
+  output$distPlot <- renderPlotly({
+    
+    df<- raw %>%
+      filter(Sport %in% input$sport)%>%
+      filter(Code == input$view)%>%
+      filter(Category== input$cate) %>% 
+      group_by(Year, Subcategory) %>%
+      ungroup() 
+    
+    temp.df<-df[,c("Year","Subcategory",input$data)] %>% 
+      pivot_wider(names_from = Year, values_from = input$data)
+    
+    raw.df<-data.frame(temp.df,make.names=FALSE)
+    
+    
+    fig<-plot_ly(raw.df, x=~Subcategory, y=~raw.df[,2] ,type = 'bar',name = '2014')
+    fig <- fig %>% add_trace(y=~raw.df[,3], name = '2015')
+    fig <- fig %>% add_trace(y=~raw.df[,4], name = '2016')
+    fig <- fig %>% add_trace(y=~raw.df[,5], name = '2017')
+    fig <- fig %>% add_trace(y=~raw.df[,6], name = '2018')
+    fig <- fig %>% add_trace(y=~raw.df[,7], name = '2019')
+    fig
+    
+  })
+  
+    
+}
+
+
+
+
+shinyApp(ui, server)
