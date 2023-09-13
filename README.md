@@ -1,2 +1,2 @@
-# PAC_dash
-PAC dashboard in R/Shiny
+# R/Shiny dashboard
+Sports data analysis and dashboard in R/Shiny.
